@@ -135,6 +135,33 @@ def gen_tunnel(casename):
 
 ################################################################################
 
+def gen_corner(casename):
+    # Create a 90 degree turning duct to investigate unsteady shock structures
+
+    # Settings and boundary conditions
+    av = default_settings(casename)
+    av['pstag'] = 314.64e3; av['tstag'] = 402.88; av['p'] = 100e3;
+    av['ni'] = 301; av['nj'] = 101; 
+    av['sfac'] = 0.15; av['nsteps'] = 12000;
+
+    # Initialise the dictionary to store the curves
+    geom = {}
+
+    # Geometrical parameters to define the geometry
+    L = 0.2;
+
+    # Inner boundary of the corner
+    geom['x_a'] = np.array([-L, L, L])
+    geom['y_a'] = np.array([0, 0, -2 * L])
+
+    # Outer boundary of the corner
+    geom['x_b'] = np.array([-L, 2 * L, 2 * L]); 
+    geom['y_b'] = np.array([L, L, -2 * L]);
+
+    return(av,geom)
+
+################################################################################
+
 def gen_waves(casename):
     # Create a duct sharp turning to perform supersonic compression with perfect
     # cancellation
@@ -144,23 +171,28 @@ def gen_waves(casename):
 
     # Set static pressure as ratio of inlet stagnation - note this is static
     # pressure at the inlet plane for a supersonic inlet boundary condition
-    av['p'] = av['pstag'] / 5.751;
+    av['p'] = av['pstag'] * 0.1278;
 
     # Initialise the dictionary to store the curves
     geom = {}
 
     # Geometrical parameters from 3A3 - Two-dimensional compressible flow - 
-    # Examples Paper 1 - Q3
-    phi = np.deg2rad(17.13); dx_c = 0.1254; dy_c = 0.01759; 
-    dx_bc = 0.0243; dy_bc = 0.08241; dy = 0.1; dx = 0.3; d = 0.0716;
+    # Examples Paper 2 - Q3 
+    theta = np.deg2rad(10); beta_1 = np.deg2rad(39.314); 
+    beta_2 = np.deg2rad(49.429); dy_1 = 0.1; dx_bc = 0.2; 
 
-    # Create upper wall with single corner B
-    geom['x_b'] = np.array([-dx, dx_c + dx_bc, dx + dx_c + dx_bc]); 
-    geom['y_b'] = np.array([dy, dy, dy + dx * np.tan(phi)]);
+    # Dimensions of corners and intersection
+    dx_1 = dy_1 / np.tan(beta_1)
+    dx_2 = (dy_1 - dx_1 * np.tan(theta)) / (np.tan(theta) + np.tan(beta_2 - theta))
+    dy_2 = dx_2 * np.tan(beta_2 - theta)
 
-    # Create lower wall with two corners, A and C
-    geom['x_a'] = np.array([-dx,0,dx_c,geom['x_b'][-1] + d * np.sin(phi)])
-    geom['y_a'] = np.array([0,0,dy_c,geom['y_b'][-1] - d * np.cos(phi)])
+    # Create straight lower wall with coordinate point at shock intersection
+    geom['x_a'] = np.array([-dx_bc, dx_1 , dx_1 + dx_2 + dx_bc])
+    geom['y_a'] = np.array([0, 0, 0])
+
+    # Create upper wall with two corners
+    geom['x_b'] = np.array([-dx_bc, 0, dx_1 + dx_2, dx_1 + dx_2 + dx_bc]); 
+    geom['y_b'] = np.array([dy_1, dy_1, dy_2, dy_2]);
 
     return(av,geom)
 
@@ -430,6 +462,8 @@ def main():
         av,geom = gen_bump(casename)
     elif casename == 'tunnel':
         av,geom = gen_tunnel(casename)
+    elif casename == 'corner':
+        av,geom = gen_corner(casename)
     elif casename == 'waves':
         av,geom = gen_waves(casename)
     elif casename == 'tube':
