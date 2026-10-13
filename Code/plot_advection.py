@@ -52,10 +52,8 @@ def main():
     # used automatically in the legend.
     ax.legend()
 
-    # Show all the plots that have been drawn so far, this will cause your
-    # terminal to hang until you close them down. Pressing the "q" key is a good
-    # shortcut for this.
-    plt.show()
+    # Save the plot to a PNG file.
+    plt.savefig('advection_plots.png')
 
     # Oh no! The dissipation is awful for this first order scheme isn't it, 
     # where has the crisp step function gone?
