@@ -10,7 +10,6 @@
 *.pdf
 *.csv
 *.mat
-*.txt
 *.log
 *.bin
 *.plt
