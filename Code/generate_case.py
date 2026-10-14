@@ -547,7 +547,7 @@ def main():
         write_mesh(av,g)
 
     # Show all the plots
-    plt.show()
+    plt.savefig(f'{casename}.png')
 
     
 main()
