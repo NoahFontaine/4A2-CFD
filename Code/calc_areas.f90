@@ -13,6 +13,8 @@
 
 !     Declare integers or any extra variables you need here
 !     INSERT
+      integer :: i, j
+!     END INSERT
 
 !     Get the size of the mesh and store locally for convenience
       ni = g%ni; nj = g%nj;
@@ -24,6 +26,13 @@
 !     the i and j-directions or in a vectorised way by indexing the coordinate
 !     arrays with lists of indices
 !     INSERT
+      do i = 1, ni-1
+            do j = 1, nj-1
+                  g%area(i,j) = 0.5*abs((g%x(i+1,j+1)-g%x(i,j))*(g%y(i+1,j)-g%y(i,j+1)) - &
+                                        (g%y(i+1,j+1)-g%y(i,j))*(g%x(i+1,j)-g%x(i,j+1)))
+                  end do
+      end do
+!     END INSERT
 
 !     Calculate the projected lengths in the x and y-directions on all of the
 !     "i = const" facets and store them in g%lx_i and g%ly_i. When combined
