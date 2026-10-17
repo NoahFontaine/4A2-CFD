@@ -14,6 +14,7 @@
 !     Declare integers or any extra variables you need here
 !     INSERT
       integer :: i, j
+      real :: l_i_min, l_j_min
 !     END INSERT
 
 !     Get the size of the mesh and store locally for convenience
@@ -41,10 +42,30 @@
 !     the left hand side of the cell, the vector stored in position i,j points
 !     towards the centre of the i,j cell
 !     INSERT
+      do i = 1, ni
+            do j = 1, nj-1
+!                 Looking at i=const facets (i.e. the left hand side of the cell).
+!                 The normal vector is given by n = (y(i,j+1) - y(i,j), -(x(i,j+1) - x(i,j))).
+!                 This is the [lx_i, ly_i] vector.
+                  g%lx_i(i,j) = g%y(i,j+1) - g%y(i,j)
+                  g%ly_i(i,j) = -(g%x(i,j+1) - g%x(i,j))
+            end do
+      end do
+!     END INSERT
 
 !     Now repeat the calculation for the project lengths on the "j=const"
 !     facets. 
 !     INSERT
+      do i = 1, ni-1
+            do j = 1, nj
+!                 Looking at j=const facets (i.e. the bottom side of the cell).
+!                 The normal vector is given by n = (-(y(i+1,j) - y(i,j)), x(i+1,j) - x(i,j)).
+!                 This is the [lx_j, ly_j] vector.
+                  g%lx_j(i,j) = -(g%x(i+1,j) - g%x(i,j))
+                  g%ly_j(i,j) = g%y(i+1,j) - g%y(i,j)
+            end do
+      end do
+!     END INSERT
 
 !     Find the minimum length scale in the mesh, this is defined as the length
 !     of the shortest side of all the cells. Call this length "l_min", it is used
@@ -53,6 +74,10 @@
 !     underflow and overflow errors. Then find the overal minimum value using
 !     both the "min" and "minval" functions.
 !     INSERT
+      l_i_min = minval(hypot(g%lx_i, g%ly_i))
+      l_j_min = minval(hypot(g%lx_j, g%ly_j))
+      g%l_min = min(l_i_min, l_j_min)
+!     END INSERT
 !
 !     Print the overall minimum length size that has been calculated
       write(6,*) 'Calculated cell areas and facet lengths'
