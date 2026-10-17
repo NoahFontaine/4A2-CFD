@@ -31,7 +31,7 @@ def main():
     plot_bound(ax,g)
 
     # Show all the plots
-    plt.show()
+    plt.savefig('mesh_plot_' + sys.argv[-1] + '.png')
 
     
 main()
