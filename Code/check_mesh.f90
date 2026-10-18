@@ -24,12 +24,22 @@
 !     and flag negative numbers as an error with an if statement to "stop" the
 !     program
 !     INSERT
+      area_min = minval(g%area)
+      write(6,*) '  Minimum cell area = ', area_min
+      write(6,*)
+      if (area_min <= 0.0) then
+         write(6,*) 'Error: Negative cell area found'
+         stop
+      end if
+!     END INSERT 
 
 !     Next check that the sum of the edge vectors around every quadrilateral is 
 !     very nearly zero in both the x and y-coordinate directions. You can
 !     complete this with some elementwise addition of the arrays and use of the
 !     "maxval" and "abs" intrinsic functions.
 !     INSERT
+
+!     END INSERT
 
 !     It may be worthwhile to complete some other checks, the prevous call to
 !     the "write_output" subroutine has written a file that you can read and
