@@ -61,8 +61,8 @@
 !                 Looking at j=const facets (i.e. the bottom side of the cell).
 !                 The normal vector is given by n = (-(y(i+1,j) - y(i,j)), x(i+1,j) - x(i,j)).
 !                 This is the [lx_j, ly_j] vector.
-                  g%lx_j(i,j) = -(g%x(i+1,j) - g%x(i,j))
-                  g%ly_j(i,j) = g%y(i+1,j) - g%y(i,j)
+                  g%lx_j(i,j) = -(g%y(i+1,j) - g%y(i,j))
+                  g%ly_j(i,j) = g%x(i+1,j) - g%x(i,j)
             end do
       end do
 !     END INSERT
