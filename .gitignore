@@ -17,7 +17,6 @@ __*
 *.tar
 .venv/
 *.gz
-.venv/
 exact.*
 Upwind.*
 gpm
