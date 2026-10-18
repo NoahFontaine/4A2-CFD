@@ -15,9 +15,10 @@
 __*
 *.bak
 *.tar
+.venv/
 *.gz
+.venv/
 exact.*
 Upwind.*
 gpm
 stopit
-
