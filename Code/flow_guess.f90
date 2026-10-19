@@ -106,7 +106,7 @@
 !         crude guess. Then set all of ro, roe, rovx and rovy, note that roe 
 !         includes the kinetic energy component of the internal energy.
 !         INSERT
-          do i = 1, ni
+          do i = 1, ni-1
               g%ro(i,:) = ro_guess(i)
               g%roe(i,:) = g%ro(i,:) * (av%cv * t_guess(i) + 0.5 * v_guess(i)**2)
           end do
@@ -124,6 +124,8 @@
 !         INSERT
           g%ro(ni,:) = ro_guess(ni)
           g%roe(ni,:) = g%ro(ni,:) * (av%cv * t_guess(ni) + 0.5 * v_guess(ni)**2)
+          g%rovx(ni,:) = g%rovx(ni-1,:)
+          g%rovy(ni,:) = g%rovy(ni-1,:)
 !         END INSERT
 
 !         Print the first elements of the guess like for the crude guess
