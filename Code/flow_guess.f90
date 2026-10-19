@@ -2,7 +2,7 @@
       subroutine flow_guess(av,g,bcs,guesstype)
 
 !     This calculates an initial guess of the primary flowfield variables and
-!     stores them at the nodes within the mesh dataytype
+!     stores them at the nodes within the mesh datatype
 
 !     Explicitly declare the required variables
       use types
@@ -30,7 +30,7 @@
       v_out = (2 * av%cp * (bcs%tstag - t_out))**0.5
       ro_out = bcs%p_out / (av%rgas * t_out)
 
-!     Determine which guess calcation method to use by the value of "guesstype"
+!     Determine which guess calculation method to use by the value of "guesstype"
       if(guesstype == 1) then
 
 !         Store the exit density and internal energy as if they were uniform 
@@ -65,10 +65,14 @@
 !         and y projected lengths with "hypot" and then sum them up in the
 !         second dimension with "sum". 
 !         INSERT
+          l_i = sum(hypot(g%lx_i(1:ni,1:nj-1), g%ly_i(1:ni,1:nj-1)), dim=2)
+!         END INSERT
 
 !         Use the exit temperature, density and velocity calculated for the 
 !         crude guess with "l_i" to estimate the mass flow rate at the exit
 !         INSERT
+          
+!         END INSERT
 
 !         Set a limit to the maximum allowable mach number in the initial
 !         guess, call this "mach_lim", calculate the corresponding temperature,
