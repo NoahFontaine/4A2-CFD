@@ -21,6 +21,11 @@
 !     loops as the operations can be performed elementwise, although you may
 !     wish to define some intermediate variables to improve readability.
 !     INSERT
+      g%vx = g%rovx / g%ro
+      g%vy = g%rovy / g%ro
+      g%p = (av%gam - 1.0) * (g%roe - 0.5 * g%ro * (g%vx**2 + g%vy**2))
+      g%hstag = av%cp * (g%p / (av%rgas * g%ro)) + 0.5 * (g%vx**2 + g%vy**2)
+!     END INSERT
 
       end subroutine set_secondary
 
