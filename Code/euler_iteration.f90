@@ -43,21 +43,40 @@
 !     and storing the values in "flux_i" and "flux_j", you will need "mass_i"
 !     and "mass_j" from before
 !     INSERT
+      flux_i = 0.5 * (g%roe(1:ni,1:nj-1)/g%ro(1:ni,1:nj-1) + g%roe(1:ni,2:nj)/g%ro(1:ni,2:nj)) * mass_i
+      flux_j = 0.5 * (g%roe(1:ni-1,1:nj)/g%ro(1:ni-1,1:nj) + g%roe(2:ni,1:nj)/g%ro(2:ni,1:nj)) * mass_j
+!     END INSERT
 
 !     Update the internal energy with enthalpy fluxes
 !     INSERT
+      call sum_fluxes(av,flux_i,flux_j,g%area,g%roe,g%droe)
+!     END INSERT
 
 !     Setup the x-momentum equation including momentum flux and pressure forces
 !     INSERT
+      flux_i = 0.5 * (g%rovx(1:ni,1:nj-1)/g%ro(1:ni,1:nj-1) + g%rovx(1:ni,2:nj)/g%ro(1:ni,2:nj)) * mass_i + &
+                  0.5 * (g%p(1:ni,1:nj-1) + g%p(1:ni,2:nj)) * g%lx_i(1:ni,1:nj-1)
+      flux_j = 0.5 * (g%rovx(1:ni-1,1:nj)/g%ro(1:ni-1,1:nj) + g%rovx(2:ni,1:nj)/g%ro(2:ni,1:nj)) * mass_j + &
+                  0.5 * (g%p(1:ni-1,1:nj) + g%p(2:ni,1:nj)) * g%lx_j(1:ni-1,1:nj)
+!     END INSERT
 
 !     Update the x-momentum with momentum flux
 !     INSERT
+      call sum_fluxes(av,flux_i,flux_j,g%area,g%rovx,g%drovx)
+!     END INSERT
 
 !     Setup the y-momentum equation including momentum flux and pressure forces
 !     INSERT
+      flux_i = 0.5 * (g%rovy(1:ni,1:nj-1)/g%ro(1:ni,1:nj-1) + g%rovy(1:ni,2:nj)/g%ro(1:ni,2:nj)) * mass_i + &
+                  0.5 * (g%p(1:ni,1:nj-1) + g%p(1:ni,2:nj)) * g%ly_i(1:ni,1:nj-1)
+      flux_j = 0.5 * (g%rovy(1:ni-1,1:nj)/g%ro(1:ni-1,1:nj) + g%rovy(2:ni,1:nj)/g%ro(2:ni,1:nj)) * mass_j + &
+                  0.5 * (g%p(1:ni-1,1:nj) + g%p(2:ni,1:nj)) * g%ly_j(1:ni-1,1:nj)
+!     END INSERT
 
 !     Update the y-momentum with momentum flux
 !     INSERT
+      call sum_fluxes(av,flux_i,flux_j,g%area,g%rovy,g%drovy)
+!     END INSERT
 
 !     Add artificial viscosity by smoothing all of the primary flow variables
       call smooth_array(av,g%ro)
