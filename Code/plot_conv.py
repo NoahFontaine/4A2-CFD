@@ -41,7 +41,7 @@ def main():
     ax.legend(colnames)
 
     # Show all the plots
-    plt.show()
+    plt.savefig('convergence_plot.png', dpi=300, bbox_inches='tight')
 
     
 main()
