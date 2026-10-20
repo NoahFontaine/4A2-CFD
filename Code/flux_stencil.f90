@@ -30,6 +30,10 @@
 !     Use the finite volume method to find the change in the variables "prop"
 !     over the timestep "dt", save it in the array "dcell"
 !     INSERT
+      dcell = av%dt * (flux_i(1:ni-1,1:nj-1) - flux_i(2:ni,1:nj-1) + &
+                        flux_j(1:ni-1,1:nj-1) - flux_j(1:ni-1,2:nj)) / area(1:ni-1,1:nj-1)
+!     END INSERT
+      write(6,*) 'dcell = ', dcell
 
 !     Now distribute the changes equally to the four corners of each cell. Each 
 !     interior grid point receives one quarter of the change from each of the 

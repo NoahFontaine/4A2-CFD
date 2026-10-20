@@ -27,7 +27,7 @@
       mass_j = 0.5 * (g%rovx(1:ni-1,1:nj) + g%rovx(2:ni,1:nj)) * g%lx_j(1:ni-1,1:nj) + &
       0.5 * (g%rovy(1:ni-1,1:nj) + g%rovy(2:ni,1:nj)) * g%ly_j(1:ni-1,1:nj)
 !     END INSERT
-     
+
 !     Apply the wall boundary condition by checking that two nodes at the
 !     end of a facet are both on a wall, if so then the appropriate mass
 !     flow array is set to have zero flow through that facet
