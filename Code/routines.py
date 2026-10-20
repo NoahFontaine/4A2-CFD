@@ -21,6 +21,11 @@ def calc_secondary(av,b):
     # your post-processing, save them into the block "b" dictionary alongside
     # mesh coordinates and primary flow variables.
     # INSERT
+    b['v'] = (b['rovx']**2 + b['rovy']**2)**0.5 / b['ro']
+    b['t'] = (av['gam'] - 1) * (b['roe'] / b['ro'] - 0.5 * b['v']**2) / av['rgas']
+    b['p'] = b['ro'] * av['rgas'] * b['t']
+    # b['cp'] = (b['p'] - b['p_ref']) / (b['pstag_ref'] - b['p_ref'])
+    # b['mach'] = b['v'] / (av['ga'] * av['rgas'] * b['t'])**0.5
 
     return b
 
