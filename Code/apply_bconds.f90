@@ -38,7 +38,7 @@
 !     "ro(:)", "pstag", "tstag" and "alpha". Also set "vx(1,:)", "vy(1,:)" and 
 !     "hstag(1,:)"
 !     INSERT
-      g%p(1,:) = bcs%pstag * (bcs%ro / bcs%rostag)**av%fgam
+      g%p(1,:) = bcs%pstag * (bcs%ro / bcs%rostag)**av%gam
       t_stat = g%p(1,:) / (av%rgas * bcs%ro)
       g%rovx(1,:) = bcs%ro * sqrt(2 * av%cp * (bcs%tstag - t_stat)) * cos(bcs%alpha)
       g%rovy(1,:) = bcs%ro * sqrt(2 * av%cp * (bcs%tstag - t_stat)) * sin(bcs%alpha)
