@@ -22,6 +22,9 @@
 !     the facets in both the i and j-directions. Store these values in
 !     "mass_i" and "mass_j"
 !     INSERT
+      mass_i = 0.5 * (g%rovx(1:ni,1:nj-1) + g%rovx(1:ni,2:nj)) * g%lx_i(1:ni,1:nj-1) + 0.5 * (g%rovy(1:ni,1:nj-1) + g%rovy(1:ni,2:nj)) * g%ly_i(1:ni,1:nj-1)
+      mass_j = 0.5 * (g%rovx(1:ni-1,1:nj) + g%rovx(2:ni,1:nj)) * g%lx_j(1:ni-1,1:nj) + 0.5 * (g%rovy(1:ni-1,1:nj) + g%rovy(2:ni,1:nj)) * g%ly_j(1:ni-1,1:nj)
+!     END INSERT
      
 !     Apply the wall boundary condition by checking that two nodes at the
 !     end of a facet are both on a wall, if so then the appropriate mass
