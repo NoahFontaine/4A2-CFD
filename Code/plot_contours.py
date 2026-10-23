@@ -32,13 +32,13 @@ def main():
     # reference pressures at the inlet plane and therefore the static pressure
     # coefficient
     # INSERT
-    cut = cut_i(g,0)
-    mass_av = np.mean(cut['ro'] * cut['v'] * cut['area'])
-    area_av = np.mean(cut['area'])
-    g['p_ref'] = mass_av**2 / (av['gam'] * av['rgas'] * area_av**2)
-    g['pstag_ref'] = g['p_ref'] + 0.5 * mass_av**2 / area_av**2
-    g['cp'] = (g['p'] - g['p_ref']) / (g['pstag_ref'] - g['p_ref'])
-    g['mach'] = g['v'] / (av['gam'] * av['rgas'] * g['t'])**0.5
+    c = cut_i(g,0)
+    c['pstag'] = c['p'] * (
+        1 + 0.5 * (av['gam'] - 1) * c['mach']**2
+    )**(av['gam'] / (av['gam'] - 1))
+    p_ref,_ = area_av(c,'p')
+    pstag_ref,_ = mass_av(c,'pstag')
+    g['cp'] = (g['p'] - p_ref) / (pstag_ref - p_ref)
     # END INSERT
 
     # Specify the parameters to plot
@@ -68,10 +68,12 @@ def main():
         # Draw the walls of the block
         plot_wall(ax,g)
 
-    # Show all the plots
-    plt.savefig('contour_plots.png', dpi=300, bbox_inches='tight')
+        # Show all the plots
+        plt.savefig(
+            f'contour_plots_{sys.argv[-1]}_{name}.png',
+            dpi=300,
+            bbox_inches='tight',
+        )
 
     
 main()
-
-
