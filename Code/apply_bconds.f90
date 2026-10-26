@@ -13,8 +13,9 @@
       type(t_bconds), intent(inout) :: bcs
 
 !     Declare the other variables you need here
-      real :: t_stat(g%nj)
 !     INSERT
+      real :: t_stat(g%nj), t(g%nj), v(g%nj), p(g%nj)
+!     END INSERT
 
 !     At the inlet boundary the change in density is driven towards "rostag",
 !     which is then used to obtain the other flow properties to match the
@@ -38,14 +39,15 @@
 !     "ro(:)", "pstag", "tstag" and "alpha". Also set "vx(1,:)", "vy(1,:)" and 
 !     "hstag(1,:)"
 !     INSERT
-      g%p(1,:) = bcs%pstag * (bcs%ro / bcs%rostag)**av%gam
-      t_stat = g%p(1,:) / (av%rgas * bcs%ro)
-      g%rovx(1,:) = bcs%ro * sqrt(2 * av%cp * (bcs%tstag - t_stat)) * cos(bcs%alpha)
-      g%rovy(1,:) = bcs%ro * sqrt(2 * av%cp * (bcs%tstag - t_stat)) * sin(bcs%alpha)
-      g%roe(1,:) = bcs%ro * (av%cv * bcs%tstag + 0.5 * (g%rovx(1,:)**2 + g%rovy(1,:)**2) / bcs%ro)
-      g%vx(1,:) = g%rovx(1,:) / bcs%ro
-      g%vy(1,:) = g%rovy(1,:) / bcs%ro
-      g%hstag(1,:) = av%cp * (g%p(1,:) / (av%rgas * bcs%ro)) + 0.5 * (g%vx(1,:)**2 + g%vy(1,:)**2)
+      t = bcs%tstag * (bcs%ro / bcs%rostag)**(av%gam - 1)
+      v = (2 * av%cp * (bcs%tstag - t))**0.5
+      g%p(1,:) = bcs%ro * av%rgas * t
+      g%vx(1,:) = v * cos(bcs%alpha)
+      g%vy(1,:) = v * sin(bcs%alpha)
+      g%rovx(1,:) = bcs%ro * g%vx(1,:)
+      g%rovy(1,:) = bcs%ro * g%vy(1,:)
+      g%roe(1,:) = bcs%ro * (av%cv * t + 0.5 * v**2)
+      g%hstag(1,:) = av%cp * bcs%tstag
 !     END INSERT
 
 !     For the outlet boundary condition set the value of "p(ni,:)" to the
