@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 #
-# Run a case at ten CFL values and plot the convergence histories.
+# Run cases at twenty CFL values and compare final density residuals.
 #
 # From the Cases directory, run:
-#     python ../Code/plot_conv_from_CFL.py bend
+#     python ../Code/plot_conv_from_CFL.py
+# Optionally specify one or more case names:
+#     python ../Code/plot_conv_from_CFL.py bend bump
 
 from pathlib import Path
 import shutil
@@ -15,75 +17,61 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_residuals(case_name, cfl_values, residual_files, output_dir):
-    fieldnames = [
-        ["dro_avg", "droe_avg", "drovx_avg", "drovy_avg"],
-        ["dro_max", "droe_max", "drovx_max", "drovy_max"],
-    ]
-    residual_columns = {
-        "dro_avg": 1,
-        "droe_avg": 2,
-        "drovx_avg": 3,
-        "drovy_avg": 4,
-        "dro_max": 5,
-        "droe_max": 6,
-        "drovx_max": 7,
-        "drovy_max": 8,
-    }
-    labels = ["Density", "Energy", "X momentum", "Y momentum"]
-    figure, axes = plt.subplots(2, 4, figsize=(18, 9), sharex=True)
-    colors = plt.cm.viridis(np.linspace(0, 1, len(cfl_values)))
-    residual_data = [np.loadtxt(filename, ndmin=2) for filename in residual_files]
-    if any(data.shape[1] < 9 for data in residual_data):
-        raise ValueError("A convergence CSV must contain nine columns")
+def plot_residuals(case_residuals, cfl_values, output_dir):
+    figure, axis = plt.subplots(figsize=(9.6, 7.2))
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    order_colors = {0: "tab:green", 1: "tab:orange", 2: "tab:purple"}
 
-    for row, fields in enumerate(fieldnames):
-        for column, fieldname in enumerate(fields):
-            axis = axes[row, column]
-            for cfl, data, color in zip(cfl_values, residual_data, colors):
+    for (case_name, residuals), color in zip(case_residuals.items(), colors):
+        if np.any(~np.isfinite(residuals)) or np.any(residuals <= 0):
+            raise ValueError(
+                f"Final average density residuals for {case_name} "
+                "must be finite and positive"
+            )
+        axis.plot(
+            cfl_values,
+            residuals,
+            marker="o",
+            color=color,
+            label=f"{case_name} residual",
+        )
+
+        reference_value = residuals[-1]
+        reference_cfl = cfl_values[-1]
+        if case_name == "bend":
+            for order in (0, 1, 2):
+                reference_residuals = (
+                    reference_value * (cfl_values / reference_cfl) ** order
+                )
                 axis.plot(
-                    data[:, 0],
-                    data[:, residual_columns[fieldname]],
-                    color=color,
-                    label=f"CFL={cfl:.5f}",
+                    cfl_values,
+                    reference_residuals,
+                    linestyle="--",
+                    color=order_colors[order],
+                    alpha=0.55,
+                    label=f"{order}th order (CFL^{order})",
                 )
 
-            statistic = "average" if row == 0 else "maximum"
-            axis.set_title(f"{labels[column]} ({statistic})")
-            axis.set_yscale("log")
-            axis.tick_params(direction="in", which="both")
-            axis.grid(True, which="both", linestyle="-", linewidth=0.5, alpha=0.5)
-            if column == 0:
-                axis.set_ylabel("Residual")
-            if row == 1:
-                axis.set_xlabel("Iteration")
-
-    handles, legend_labels = axes[0, 0].get_legend_handles_labels()
-    figure.legend(handles, legend_labels, loc="lower center", ncol=5)
-    figure.tight_layout(rect=(0, 0.1, 1, 1))
-    figure.savefig(
-        output_dir / f"convergence_plot_{case_name}_CFL.png",
-        dpi=300,
-        bbox_inches="tight",
-    )
+    case_names = " and ".join(case_residuals)
+    axis.set_title(f"Final average density residual versus CFL: {case_names}")
+    axis.set_xlabel("CFL number")
+    axis.set_ylabel("Residual")
+    axis.set_xscale("log")
+    axis.set_yscale("log")
+    axis.tick_params(direction="in", which="both")
+    axis.grid(True, which="both", linestyle="-", linewidth=0.5, alpha=0.5)
+    axis.legend(fontsize="small")
+    figure.tight_layout()
+    plot_name = f"convergence_plot_{'_'.join(case_residuals)}_CFL.png"
+    figure.savefig(output_dir / plot_name,
+                   dpi=300, bbox_inches="tight")
     plt.close(figure)
 
 
-def main():
-    if len(sys.argv) != 2:
-        raise SystemExit(
-            f"Usage: python {Path(sys.argv[0]).name} <casename>"
-        )
-
-    case_name = sys.argv[1]
-    case_dir = Path.cwd()
+def run_case(case_name, cfl_values, case_dir, solver):
     input_file = case_dir / f"input_{case_name}.txt"
-    solver = Path(__file__).resolve().parent / "solver.x"
-
     if not input_file.is_file():
         raise FileNotFoundError(f"Case input file not found: {input_file}")
-    if not solver.is_file():
-        raise FileNotFoundError(f"Solver executable not found: {solver}")
 
     input_lines = input_file.read_text().splitlines()
     if len(input_lines) < 5:
@@ -106,14 +94,13 @@ def main():
     )
     if not geometry_input.is_file():
         raise FileNotFoundError(f"Solver input file not found: {geometry_input}")
-
     solver_inputs = input_lines.copy()
-    cfl_values = np.linspace(0.1, 1.1, 11)
-    residual_files = []
+    solver_inputs = input_lines.copy()
+    final_density_residuals = []
     residual_source_name = f"conv_{case_name}.csv"
 
     for cfl in cfl_values:
-        cfl_text = f"{cfl:.5f}"
+        cfl_text = f"{cfl:.8g}"
         row_fields = solver_inputs[2].split()
         row_fields[0] = cfl_text
         solver_inputs[2] = " ".join(row_fields)
@@ -145,11 +132,31 @@ def main():
                 case_dir / f"conv_{case_name}_CFL_{cfl_text}.csv"
             )
             shutil.copy2(residual_source, residual_destination)
-            residual_files.append(residual_destination)
+            residual_data = np.loadtxt(residual_destination, ndmin=2)
+            if residual_data.shape[1] < 9:
+                raise ValueError(
+                    f"{residual_destination} must contain nine columns"
+                )
+            final_density_residuals.append(residual_data[-1, 1])
 
-    plot_residuals(case_name, cfl_values, residual_files, case_dir)
     print(f"Saved residual histories as conv_{case_name}_CFL_*.csv")
-    print(f"Saved plot as convergence_plot_{case_name}_CFL.png")
+    return np.asarray(final_density_residuals)
+
+
+def main():
+    case_names = sys.argv[1:] or ["bend", "bump"]
+    case_dir = Path.cwd()
+    solver = Path(__file__).resolve().parent / "solver.x"
+    if not solver.is_file():
+        raise FileNotFoundError(f"Solver executable not found: {solver}")
+
+    cfl_values = np.geomspace(1e-5, 0.9, 10)
+    case_residuals = {
+        case_name: run_case(case_name, cfl_values, case_dir, solver)
+        for case_name in case_names
+    }
+    plot_residuals(case_residuals, cfl_values, case_dir)
+    print(f"Saved plot as convergence_plot_{'_'.join(case_names)}_CFL.png")
 
 
 if __name__ == "__main__":
