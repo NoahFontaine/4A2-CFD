@@ -78,7 +78,7 @@
 !         guess, call this "mach_lim", calculate the corresponding temperature,
 !         called "t_lim"
 !         INSERT
-          mach_lim = 0.1
+          mach_lim = 0.8
           t_lim = bcs%tstag / (1 + 0.5 * (mach_lim**2) * (av%gam - 1))
 !         END INSERT
 !         Now estimate the velocity and density at every "i = const" line, call 
