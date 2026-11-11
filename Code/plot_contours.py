@@ -62,8 +62,13 @@ def main():
 
         # Add Mach = 1 contours
         if name == 'mach':
-            ax.contour(g['x'],g['y'],g['mach'],[1.0],colors='w',
-                linewidths=0.5) 
+            mach_levels = np.arange(
+                np.floor(np.nanmin(g['mach']) / 0.05) * 0.05,
+                np.nanmax(g['mach']) + 0.05,
+                0.05,
+            )
+            ax.contour(g['x'],g['y'],g['mach'],mach_levels,colors='w',
+                linewidths=0.5)
 
         # Draw the walls of the block
         plot_wall(ax,g)
