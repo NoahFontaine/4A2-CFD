@@ -4,12 +4,20 @@
 Run from the Cases directory:
     python ../Code/run_bump_mesh_sweep.py
 
+After the sweep, plot the final average density residual against ni with:
+    python ../Code/plot_bump_mesh_convergence.py
+
+Plot CPU time and iteration count against ni with:
+    python ../Code/plot_mesh_scaling.py
+
 The script saves one residual history per mesh as conv_bump_mesh_NIxNJ.csv,
-one solver log per mesh, and CPU timings in mesh_timing_bump.csv.
+one solver log per mesh, and iteration counts and CPU timings in
+mesh_timing_bump.csv.
 """
 
 import csv
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -37,6 +45,27 @@ def read_cpu_time(time_output):
     if not np.isfinite(cpu_seconds) or cpu_seconds < 0:
         raise ValueError(f"CPU time in {time_output} must be finite and non-negative")
     return cpu_seconds
+
+
+def read_iteration_count(log_file, residual_data):
+    for line in log_file.read_text().splitlines():
+        match = re.search(
+            r"Calculation completed after\s+(\d+)\s+iterations", line
+        )
+        if match:
+            return int(match.group(1))
+
+    last_iteration = residual_data[-1, 0]
+    if (
+        not np.isfinite(last_iteration)
+        or last_iteration < 0
+        or not last_iteration.is_integer()
+    ):
+        raise ValueError(
+            f"Could not determine the iteration count from {log_file} "
+            f"or its residual history"
+        )
+    return int(last_iteration)
 
 
 def read_bump_input(input_file):
@@ -70,9 +99,9 @@ def run_mesh_sweep(case_dir, solver, time_command):
     timing_file = case_dir / "mesh_timing_bump.csv"
     with timing_file.open("w", newline="") as timing_stream:
         timing_writer = csv.writer(timing_stream)
-        timing_writer.writerow(("ni", "nj", "cpu_seconds"))
+        timing_writer.writerow(("ni", "nj", "iterations", "cpu_seconds"))
 
-        for multiplier in (1, 2, 4):
+        for multiplier in (1, 2, 4, 6, 8, 12, 16):
             ni = base_ni * multiplier
             nj = base_nj * multiplier
             mesh_name = f"{ni}x{nj}"
@@ -120,14 +149,18 @@ def run_mesh_sweep(case_dir, solver, time_command):
                         f"{residual_source} must contain nine convergence columns"
                     )
 
+                iterations = read_iteration_count(log_file, residual_data)
                 residual_destination = (
                     case_dir / f"conv_bump_mesh_{mesh_name}.csv"
                 )
                 shutil.copy2(residual_source, residual_destination)
-                timing_writer.writerow((ni, nj, f"{cpu_seconds:.8g}"))
+                timing_writer.writerow(
+                    (ni, nj, iterations, f"{cpu_seconds:.8g}")
+                )
                 timing_stream.flush()
                 print(
                     f"Saved {residual_destination.name}; "
+                    f"{iterations} iterations; "
                     f"user CPU time: {cpu_seconds:.6g} s"
                 )
 
