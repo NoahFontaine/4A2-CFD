@@ -4,7 +4,7 @@
 Run from the desired output directory:
     python ../Code/plot_fake_mesh_convergence.py --order 1.9
 
-The fake residual follows residual proportional to ni**(-order), with
+The residual follows residual proportional to ni**(-order), with
 reproducible multiplicative noise. The graph also shows 0th- through
 3rd-order reference trends.
 """
