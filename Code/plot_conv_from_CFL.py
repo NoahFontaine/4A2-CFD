@@ -18,9 +18,9 @@ import numpy as np
 
 
 def plot_residuals(case_residuals, cfl_values, output_dir):
-    figure, axis = plt.subplots(figsize=(9.6, 7.2))
+    figure, axis = plt.subplots(figsize=[8, 6])
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-    order_colors = {0: "tab:green", 1: "tab:orange", 2: "tab:purple"}
+    order_colors = {0: "#000000", 1: "#006400", 2: "#4B0082"}
 
     for (case_name, residuals), color in zip(case_residuals.items(), colors):
         if np.any(~np.isfinite(residuals)) or np.any(residuals <= 0):

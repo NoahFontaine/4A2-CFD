@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def run_case(case_name, cfl_values, case_dir, solver):
+def run_case(case_name, parameter_name, parameter_values, case_dir, solver,
+             time_command):
     input_file = case_dir / f"input_{case_name}.txt"
     if not input_file.is_file():
         raise FileNotFoundError(f"Case input file not found: {input_file}")
@@ -25,12 +26,13 @@ def run_case(case_name, cfl_values, case_dir, solver):
     if len(input_lines) < 5:
         raise ValueError(f"{input_file} must contain at least five rows")
 
-    cfl_fields = input_lines[2].split()
-    if len(cfl_fields) < 3:
+    parameter_fields = input_lines[2].split()
+    if len(parameter_fields) < 3:
         raise ValueError(
             f"The third row of {input_file} must contain CFL, smoothing, "
             "and convergence values"
         )
+    parameter_index = {"CFL": 0, "sfac": 1}[parameter_name]
 
     mesh_fields = input_lines[4].split()
     if not mesh_fields:
@@ -42,29 +44,31 @@ def run_case(case_name, cfl_values, case_dir, solver):
     )
     if not geometry_input.is_file():
         raise FileNotFoundError(f"Solver input file not found: {geometry_input}")
-    solver_inputs = input_lines.copy()
-    solver_inputs = input_lines.copy()
     elapsed_seconds = []
     residual_source_name = f"conv_{case_name}.csv"
 
-    for cfl in cfl_values:
-        cfl_text = f"{cfl:.8g}"
+    for parameter_value in parameter_values:
+        value_text = f"{parameter_value:.8g}"
+        solver_inputs = input_lines.copy()
         row_fields = solver_inputs[2].split()
-        row_fields[0] = cfl_text
+        row_fields[parameter_index] = value_text
         solver_inputs[2] = " ".join(row_fields)
         input_text = "\n".join(solver_inputs) + "\n"
 
         with tempfile.TemporaryDirectory(
-            prefix=f".{case_name}_cfl_", dir=case_dir
+            prefix=f".{case_name}_{parameter_name}_", dir=case_dir
         ) as working_directory:
             working_dir = Path(working_directory)
             shutil.copy2(geometry_input, working_dir / geometry_input.name)
-            log_path = case_dir / f"output_{case_name}_CFL_{cfl_text}.log"
+            log_path = (
+                case_dir
+                / f"output_{case_name}_{parameter_name}_{value_text}.log"
+            )
             with log_path.open("w") as log_file:
-                print(f"Running {case_name} with CFL={cfl_text}")
+                print(f"Running {case_name} with {parameter_name}={value_text}")
                 start_time = time.perf_counter()
                 subprocess.run(
-                    [str(solver)],
+                    [time_command, "-p", str(solver)],
                     input=input_text,
                     text=True,
                     stdout=log_file,
@@ -80,65 +84,81 @@ def run_case(case_name, cfl_values, case_dir, solver):
                     f"Solver did not create residual file {residual_source}"
                 )
             residual_destination = (
-                case_dir / f"conv_{case_name}_CFL_{cfl_text}.csv"
+                case_dir
+                / f"conv_{case_name}_{parameter_name}_{value_text}.csv"
             )
             shutil.copy2(residual_source, residual_destination)
 
-    print(f"Saved residual histories as conv_{case_name}_CFL_*.csv")
+    print(
+        f"Saved residual histories as "
+        f"conv_{case_name}_{parameter_name}_*.csv"
+    )
     return np.asarray(elapsed_seconds)
 
 
-def plot_times(case_times, cfl_values, case_dir):
-    figure, axis = plt.subplots(figsize=(9.6, 7.2))
+def plot_times(case_times, parameter_values, parameter_name, case_dir):
+    figure, axis = plt.subplots(figsize=[9.6,7.2])
     case_colors = {"bend": "tab:blue", "bump": "tab:red"}
     order_colors = {0: "tab:green", 1: "tab:orange", 2: "tab:purple"}
 
     for case_name, elapsed_seconds in case_times.items():
         if np.any(~np.isfinite(elapsed_seconds)) or np.any(elapsed_seconds <= 0):
             raise ValueError(f"Solver times for {case_name} must be finite and positive")
-        color = case_colors.get(case_name)
+        color = case_colors.get(case_name, "tab:blue")
         axis.plot(
-            cfl_values,
+            parameter_values,
             elapsed_seconds,
             marker="o",
             color=color,
             label=f"{case_name} simulation time",
         )
 
-        reference_time = elapsed_seconds[-1]
-        reference_cfl = cfl_values[-1]
-        for order, trend_color in order_colors.items():
-            trend_times = reference_time * (cfl_values / reference_cfl) ** order
-            axis.plot(
-                cfl_values,
-                trend_times,
-                linestyle="--",
-                color=trend_color,
-                alpha=0.8,
-                label=f"{case_name} {order}th order (CFL^{order})",
-            )
+        if parameter_name == "CFL":
+            reference_time = elapsed_seconds[-1]
+            reference_cfl = parameter_values[-1]
+            for order, trend_color in order_colors.items():
+                trend_times = (
+                    reference_time * (parameter_values / reference_cfl) ** order
+                )
+                axis.plot(
+                    parameter_values,
+                    trend_times,
+                    linestyle="--",
+                    color=trend_color,
+                    alpha=0.8,
+                    label=f"{case_name} {order}th order (CFL^{order})",
+                )
 
     case_names = list(case_times)
-    timing_file = case_dir / f"simulation_times_{'_'.join(case_names)}_CFL.csv"
+    timing_file = (
+        case_dir
+        / f"simulation_times_{'_'.join(case_names)}_{parameter_name}.csv"
+    )
     np.savetxt(
         timing_file,
-        np.column_stack([cfl_values, *case_times.values()]),
+        np.column_stack([parameter_values, *case_times.values()]),
         delimiter=",",
-        header="CFL," + ",".join(f"{name}_seconds" for name in case_names),
+        header=parameter_name + "," + ",".join(
+            f"{name}_seconds" for name in case_names
+        ),
         comments="",
         fmt="%.8g",
     )
 
-    axis.set_xscale("log")
+    if parameter_name == "CFL":
+        axis.set_xscale("log")
     axis.set_yscale("log")
-    axis.set_xlabel("CFL number")
+    axis.set_xlabel("CFL number" if parameter_name == "CFL" else "sfac")
     axis.set_ylabel("Simulation time (seconds)")
-    axis.set_title("Solver time versus CFL")
+    axis.set_title(f"Solver time versus {parameter_name}")
     axis.tick_params(direction="in", which="both")
     axis.grid(True, which="both", linestyle="-", linewidth=0.5, alpha=0.6)
     axis.legend(fontsize="small", ncol=2)
     figure.tight_layout()
-    plot_file = case_dir / f"simulation_time_{'_'.join(case_names)}_CFL.png"
+    plot_file = (
+        case_dir
+        / f"simulation_time_{'_'.join(case_names)}_{parameter_name}.png"
+    )
     figure.savefig(plot_file, dpi=300, bbox_inches="tight")
     plt.close(figure)
 
@@ -152,13 +172,29 @@ def main():
     solver = Path(__file__).resolve().parent / "solver.x"
     if not solver.is_file():
         raise FileNotFoundError(f"Solver executable not found: {solver}")
+    time_command = shutil.which("time")
+    if time_command is None:
+        raise FileNotFoundError("The 'time' executable was not found")
 
     cfl_values = np.geomspace(1e-5, 0.9, 10)
-    case_times = {
-        case_name: run_case(case_name, cfl_values, case_dir, solver)
-        for case_name in case_names
-    }
-    plot_times(case_times, cfl_values, case_dir)
+    sfac_values = np.linspace(0.0, 1.0, 11)
+    for parameter_name, parameter_values in (
+        ("CFL", cfl_values),
+        ("sfac", sfac_values),
+    ):
+        print(f"Starting {parameter_name} sweep")
+        case_times = {
+            case_name: run_case(
+                case_name,
+                parameter_name,
+                parameter_values,
+                case_dir,
+                solver,
+                time_command,
+            )
+            for case_name in case_names
+        }
+        plot_times(case_times, parameter_values, parameter_name, case_dir)
 
 
 if __name__ == "__main__":
