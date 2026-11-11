@@ -29,9 +29,12 @@ def read_timing_data(csv_file, parameter_name, case_names):
         available_columns = set(reader.fieldnames[1:])
         case_columns = {}
         for case_name in case_names:
-            named_column = f"{case_name}_seconds"
-            if named_column in available_columns:
-                case_columns[case_name] = named_column
+            cpu_column = f"{case_name}_cpu_seconds"
+            legacy_column = f"{case_name}_seconds"
+            if cpu_column in available_columns:
+                case_columns[case_name] = cpu_column
+            elif legacy_column in available_columns:
+                case_columns[case_name] = legacy_column
             elif len(case_names) == 1 and "elapsed_seconds" in available_columns:
                 case_columns[case_name] = "elapsed_seconds"
             else:
@@ -65,13 +68,13 @@ def read_timing_data(csv_file, parameter_name, case_names):
         case_name: np.asarray(elapsed_seconds)
         for case_name, elapsed_seconds in case_times.items()
     }
-    for case_name, elapsed_seconds in case_times.items():
+    for case_name, cpu_times in case_times.items():
         if (
-            np.any(~np.isfinite(elapsed_seconds))
-            or np.any(elapsed_seconds <= 0)
+            np.any(~np.isfinite(cpu_times))
+            or np.any(cpu_times <= 0)
         ):
             raise ValueError(
-                f"Solver times for {case_name} in {csv_file} "
+                f"CPU times for {case_name} in {csv_file} "
                 "must be finite and positive"
             )
     return parameter_values, case_times
@@ -82,18 +85,18 @@ def plot_times(case_times, parameter_values, parameter_name, case_dir):
     case_colors = {"bend": "tab:blue", "bump": "tab:orange"}
     order_colors = {0: "#000000", 1: "#006400", 2: "#4B0082"}
 
-    for case_name, elapsed_seconds in case_times.items():
+    for case_name, cpu_times in case_times.items():
         color = case_colors.get(case_name, "tab:blue")
         axis.plot(
             parameter_values,
-            elapsed_seconds,
+            cpu_times,
             marker="o",
             color=color,
-            label=f"{case_name} simulation time",
+            label=f"{case_name} CPU time",
         )
 
         if parameter_name == "CFL":
-            reference_time = elapsed_seconds[-1]
+            reference_time = cpu_times[-1]
             reference_cfl = parameter_values[-1]
             for order, trend_color in order_colors.items():
                 if case_name == "bend":
@@ -114,7 +117,7 @@ def plot_times(case_times, parameter_values, parameter_name, case_dir):
         axis.set_xscale("log")
     axis.set_yscale("log")
     axis.set_xlabel("CFL number" if parameter_name == "CFL" else "sfac", fontsize=14)
-    axis.set_ylabel("Simulation time (seconds)", fontsize=14)
+    axis.set_ylabel("CPU time (seconds)", fontsize=14)
     axis.tick_params(direction="in", which="both")
     axis.grid(True, which="both", linestyle="-", linewidth=0.5, alpha=0.6)
     axis.legend(fontsize="small", ncol=2)

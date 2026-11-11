@@ -10,10 +10,28 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+
+def read_cpu_time(time_output):
+    time_lines = time_output.read_text().splitlines()
+    if len(time_lines) < 2:
+        raise ValueError(f"Incomplete time output in {time_output}")
+    cpu_fields = time_lines[-2].split()
+    if len(cpu_fields) != 2 or cpu_fields[0] != "user":
+        raise ValueError(
+            f"Expected the second-to-last time output line to be user CPU "
+            f"time in {time_output}"
+        )
+    try:
+        cpu_seconds = float(cpu_fields[1])
+    except ValueError as error:
+        raise ValueError(f"Invalid CPU time in {time_output}") from error
+    if not np.isfinite(cpu_seconds) or cpu_seconds <= 0:
+        raise ValueError(f"CPU time in {time_output} must be finite and positive")
+    return cpu_seconds
 
 
 def run_case(case_name, parameter_name, parameter_values, case_dir, solver,
@@ -44,7 +62,7 @@ def run_case(case_name, parameter_name, parameter_values, case_dir, solver,
     )
     if not geometry_input.is_file():
         raise FileNotFoundError(f"Solver input file not found: {geometry_input}")
-    elapsed_seconds = []
+    cpu_times = []
     residual_source_name = f"conv_{case_name}.csv"
 
     for parameter_value in parameter_values:
@@ -64,11 +82,17 @@ def run_case(case_name, parameter_name, parameter_values, case_dir, solver,
                 case_dir
                 / f"output_{case_name}_{parameter_name}_{value_text}.log"
             )
+            time_output = working_dir / "time.txt"
             with log_path.open("w") as log_file:
                 print(f"Running {case_name} with {parameter_name}={value_text}")
-                start_time = time.perf_counter()
                 subprocess.run(
-                    [time_command, "-p", str(solver)],
+                    [
+                        time_command,
+                        "-p",
+                        "-o",
+                        str(time_output),
+                        str(solver),
+                    ],
                     input=input_text,
                     text=True,
                     stdout=log_file,
@@ -76,7 +100,7 @@ def run_case(case_name, parameter_name, parameter_values, case_dir, solver,
                     cwd=working_dir,
                     check=True,
                 )
-                elapsed_seconds.append(time.perf_counter() - start_time)
+                cpu_times.append(read_cpu_time(time_output))
 
             residual_source = working_dir / residual_source_name
             if not residual_source.is_file():
@@ -93,7 +117,7 @@ def run_case(case_name, parameter_name, parameter_values, case_dir, solver,
         f"Saved residual histories as "
         f"conv_{case_name}_{parameter_name}_*.csv"
     )
-    return np.asarray(elapsed_seconds)
+    return np.asarray(cpu_times)
 
 
 def plot_times(case_times, parameter_values, parameter_name, case_dir):
@@ -101,20 +125,20 @@ def plot_times(case_times, parameter_values, parameter_name, case_dir):
     case_colors = {"bend": "tab:blue", "bump": "tab:red"}
     order_colors = {0: "tab:green", 1: "tab:orange", 2: "tab:purple"}
 
-    for case_name, elapsed_seconds in case_times.items():
-        if np.any(~np.isfinite(elapsed_seconds)) or np.any(elapsed_seconds <= 0):
-            raise ValueError(f"Solver times for {case_name} must be finite and positive")
+    for case_name, cpu_times in case_times.items():
+        if np.any(~np.isfinite(cpu_times)) or np.any(cpu_times <= 0):
+            raise ValueError(f"CPU times for {case_name} must be finite and positive")
         color = case_colors.get(case_name, "tab:blue")
         axis.plot(
             parameter_values,
-            elapsed_seconds,
+            cpu_times,
             marker="o",
             color=color,
-            label=f"{case_name} simulation time",
+            label=f"{case_name} CPU time",
         )
 
         if parameter_name == "CFL":
-            reference_time = elapsed_seconds[-1]
+            reference_time = cpu_times[-1]
             reference_cfl = parameter_values[-1]
             for order, trend_color in order_colors.items():
                 trend_times = (
@@ -139,7 +163,7 @@ def plot_times(case_times, parameter_values, parameter_name, case_dir):
         np.column_stack([parameter_values, *case_times.values()]),
         delimiter=",",
         header=parameter_name + "," + ",".join(
-            f"{name}_seconds" for name in case_names
+            f"{name}_cpu_seconds" for name in case_names
         ),
         comments="",
         fmt="%.8g",
@@ -149,7 +173,7 @@ def plot_times(case_times, parameter_values, parameter_name, case_dir):
         axis.set_xscale("log")
     axis.set_yscale("log")
     axis.set_xlabel("CFL number" if parameter_name == "CFL" else "sfac")
-    axis.set_ylabel("Simulation time (seconds)")
+    axis.set_ylabel("CPU time (seconds)")
     axis.set_title(f"Solver time versus {parameter_name}")
     axis.tick_params(direction="in", which="both")
     axis.grid(True, which="both", linestyle="-", linewidth=0.5, alpha=0.6)
