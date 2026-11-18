@@ -80,6 +80,7 @@
 
 !         Primary variables at nodes
           real, dimension(:,:), allocatable :: ro, roe, rovx, rovy
+          real, dimension(:,:), allocatable :: ro_start, roe_start, rovx_start, rovy_start
 
 !         Variables to hold cell increments
           real, dimension(:,:), allocatable :: dro, droe, drovx, drovy
